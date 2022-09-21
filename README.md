@@ -59,3 +59,6 @@ java -Dserver.port=8080 \
 控制台收到客户端心跳包之后，会在左侧导航栏中显示该客户端信息。如果控制台能够看到客户端的机器信息，则表明客户端接入成功了。
 
 更多：[控制台功能介绍](./Sentinel_Dashboard_Feature.md)。
+
+## 4.关于持久化
+首先，本代码基于两位大佬@FJiayang，@jnan806 的贡献，在此基础上简单修复了一下些小问题。在官方基础上支持了zookeeper，nacos，apollo的支持，通过配置参数注入，同时支持docker部署，提供docker-compose和对应的docker镜像。
