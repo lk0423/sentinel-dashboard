@@ -1,8 +1,7 @@
-FROM openjdk:8
+FROM openjdk:8-jdk-alpine3.7
 
 MAINTAINER lankun0606@163.com
 
-ENV PARAM ""
 ENV VERSION 1.8.0
 
 RUN mkdir -p /sentinel
@@ -16,4 +15,4 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 RUN echo 'Asia/Shanghai' > /etc/timezone
 
-ENTRYPOINT ["java", "${PARAM}", "-jar", "app-${VERSION}.jar"]
+CMD java ${PARAM} -jar app-${VERSION}.jar
