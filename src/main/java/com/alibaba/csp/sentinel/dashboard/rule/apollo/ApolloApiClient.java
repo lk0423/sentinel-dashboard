@@ -32,7 +32,7 @@ public class ApolloApiClient<T> extends AbstractpersistentRuleApiClient<T> {
 
     private String getRuleConfigId(String appName, RuleConfigTypeEnum ruleFix) {
         appName = StringUtils.isBlank(appName) ? "Sentinel" : appName;
-        return String.format("%s-%s", appName, ruleFix.getValue());
+        return String.format("sentinel_rule_config-%s-%s", appName, ruleFix.getValue());
     }
 
     @Override

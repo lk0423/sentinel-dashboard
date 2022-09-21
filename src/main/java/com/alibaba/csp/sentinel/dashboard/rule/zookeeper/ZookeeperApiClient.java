@@ -28,7 +28,7 @@ public class ZookeeperApiClient<T> extends AbstractpersistentRuleApiClient<T> {
 
     public String getRuleConfigId(String appName, RuleConfigTypeEnum ruleFix) {
         appName = StringUtils.isBlank(appName) ? "Sentinel" : appName;
-        return String.format("/%s/%s", appName, ruleFix.getValue());
+        return String.format("/sentinel_rule_config/%s/%s", appName, ruleFix.getValue());
     }
 
     @Override
