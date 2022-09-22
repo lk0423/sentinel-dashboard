@@ -49,7 +49,7 @@ public class AuthorityRuleController {
     private SentinelApiClient sentinelApiClient;
     @Autowired
     private RuleRepository<AuthorityRuleEntity, Long> repository;
-    @Autowired
+    @Autowired(required = false)
     private PersistentRuleApiClient<AuthorityRuleEntity> persistentApiClient;
 
 

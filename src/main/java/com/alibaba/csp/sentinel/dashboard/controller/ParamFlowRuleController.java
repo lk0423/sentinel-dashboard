@@ -58,7 +58,7 @@ public class ParamFlowRuleController {
     private AppManagement appManagement;
     @Autowired
     private RuleRepository<ParamFlowRuleEntity, Long> repository;
-    @Autowired
+    @Autowired(required = false)
     private PersistentRuleApiClient<ParamFlowRuleEntity> persistentApiClient;
 
     private boolean checkIfSupported(String app, String ip, int port) {

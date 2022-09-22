@@ -55,7 +55,7 @@ public class FlowControllerV1 {
     @Autowired
     private SentinelApiClient sentinelApiClient;
 
-    @Autowired
+    @Autowired(required = false)
     private PersistentRuleApiClient<FlowRuleEntity> persistentApiClient;
 
 
@@ -268,10 +268,6 @@ public class FlowControllerV1 {
                 oldEntity.getIp(), id, e);
             return Result.ofFail(-1, e.getMessage());
         }
-    }
-
-    private void publishRules_persistence(/*@NonNull*/ String app) throws Exception {
-
     }
 
     private CompletableFuture<Void> publishRules(String app, String ip, Integer port) {

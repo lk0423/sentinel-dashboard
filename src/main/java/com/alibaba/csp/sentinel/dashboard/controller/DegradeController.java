@@ -52,7 +52,7 @@ public class DegradeController {
     private RuleRepository<DegradeRuleEntity, Long> repository;
     @Autowired
     private SentinelApiClient sentinelApiClient;
-    @Autowired
+    @Autowired(required = false)
     private PersistentRuleApiClient<DegradeRuleEntity> persistentApiClient;
 
 

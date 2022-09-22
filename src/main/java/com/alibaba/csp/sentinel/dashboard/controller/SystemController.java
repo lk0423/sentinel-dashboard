@@ -49,7 +49,7 @@ public class SystemController {
     private RuleRepository<SystemRuleEntity, Long> repository;
     @Autowired
     private SentinelApiClient sentinelApiClient;
-    @Autowired
+    @Autowired(required = false)
     private PersistentRuleApiClient<SystemRuleEntity> persistentApiClient;
 
     private <R> Result<R> checkBasicParams(String app, String ip, Integer port) {
