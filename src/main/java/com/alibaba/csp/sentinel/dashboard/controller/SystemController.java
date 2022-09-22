@@ -15,29 +15,26 @@
  */
 package com.alibaba.csp.sentinel.dashboard.controller;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import com.alibaba.csp.sentinel.dashboard.auth.AuthAction;
 import com.alibaba.csp.sentinel.dashboard.auth.AuthService.PrivilegeType;
+import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.RuleConfigTypeEnum;
-import com.alibaba.csp.sentinel.dashboard.repository.rule.RuleRepository;
-import com.alibaba.csp.sentinel.dashboard.rule.PersistentRuleApiClient;
-import com.alibaba.csp.sentinel.dashboard.rule.memory.MemoryApiClient;
-import com.alibaba.csp.sentinel.util.StringUtil;
-
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.SystemRuleEntity;
 import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
-import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.domain.Result;
-
+import com.alibaba.csp.sentinel.dashboard.repository.rule.RuleRepository;
+import com.alibaba.csp.sentinel.dashboard.rule.PersistentRuleApiClient;
+import com.alibaba.csp.sentinel.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author leyou(lihao)
@@ -81,7 +78,7 @@ public class SystemController {
         }
         try {
             List<SystemRuleEntity> rules = new ArrayList<SystemRuleEntity>();
-            if(persistentApiClient instanceof MemoryApiClient) {
+            if (persistentApiClient == null) {
                 rules = sentinelApiClient.fetchSystemRuleOfMachine(app, ip, port);
             } else {
                 rules = persistentApiClient.fetch(app, RuleConfigTypeEnum.SYSTEM);
@@ -164,15 +161,8 @@ public class SystemController {
             logger.error("Add SystemRule error", throwable);
             return Result.ofThrowable(-1, throwable);
         }
-
-        if(persistentApiClient instanceof MemoryApiClient) {
-            if (!publishRules(app, ip, port)) {
-                logger.warn("Publish system rules fail after rule add");
-            }
-        } else {
-            if (!this.publishRules_persistence(app)) {
-                logger.warn("Publish system rules fail after rule add");
-            }
+        if (!publishRules(app, ip, port)) {
+            logger.warn("Publish system rules fail after rule add");
         }
         return Result.ofSuccess(entity);
     }
@@ -233,14 +223,8 @@ public class SystemController {
             logger.error("save error:", throwable);
             return Result.ofThrowable(-1, throwable);
         }
-        if(persistentApiClient instanceof MemoryApiClient) {
-            if (!publishRules(entity.getApp(), entity.getIp(), entity.getPort())) {
-                logger.info("publish system rules fail after rule update");
-            }
-        } else {
-            if (!publishRules_persistence(entity.getApp())) {
-                logger.info("publish system rules fail after rule update");
-            }
+        if (!publishRules(entity.getApp(), entity.getIp(), entity.getPort())) {
+            logger.info("publish system rules fail after rule update");
         }
         return Result.ofSuccess(entity);
     }
@@ -261,26 +245,19 @@ public class SystemController {
             logger.error("delete error:", throwable);
             return Result.ofThrowable(-1, throwable);
         }
-
-        if(persistentApiClient instanceof MemoryApiClient) {
-            if (!publishRules(oldEntity.getApp(), oldEntity.getIp(), oldEntity.getPort())) {
-                logger.info("publish system rules fail after rule delete");
-            }
-        } else {
-            if (!publishRules_persistence(oldEntity.getApp())) {
-                logger.info("publish system rules fail after rule delete");
-            }
+        if (!publishRules(oldEntity.getApp(), oldEntity.getIp(), oldEntity.getPort())) {
+            logger.info("publish system rules fail after rule delete");
         }
         return Result.ofSuccess(id);
     }
 
     private boolean publishRules(String app, String ip, Integer port) {
+        if (persistentApiClient != null){
+            List<SystemRuleEntity> rules = repository.findAllByApp(app);
+            return persistentApiClient.publishReturnBoolean(app, RuleConfigTypeEnum.SYSTEM, rules);
+        }
         List<SystemRuleEntity> rules = repository.findAllByMachine(MachineInfo.of(app, ip, port));
         return sentinelApiClient.setSystemRuleOfMachine(app, ip, port, rules);
     }
 
-    private boolean publishRules_persistence(/*@NonNull*/ String app) {
-        List<SystemRuleEntity> rules = repository.findAllByApp(app);
-        return persistentApiClient.publishReturnBoolean(app, RuleConfigTypeEnum.SYSTEM, rules);
-    }
 }

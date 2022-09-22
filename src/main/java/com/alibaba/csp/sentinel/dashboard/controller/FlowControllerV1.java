@@ -15,37 +15,27 @@
  */
 package com.alibaba.csp.sentinel.dashboard.controller;
 
+import com.alibaba.csp.sentinel.dashboard.auth.AuthAction;
+import com.alibaba.csp.sentinel.dashboard.auth.AuthService.PrivilegeType;
+import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
+import com.alibaba.csp.sentinel.dashboard.datasource.RuleConfigTypeEnum;
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
+import com.alibaba.csp.sentinel.dashboard.domain.Result;
+import com.alibaba.csp.sentinel.dashboard.repository.rule.InMemoryRuleRepositoryAdapter;
+import com.alibaba.csp.sentinel.dashboard.rule.PersistentRuleApiClient;
+import com.alibaba.csp.sentinel.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import com.alibaba.csp.sentinel.dashboard.auth.AuthAction;
-import com.alibaba.csp.sentinel.dashboard.auth.AuthService.PrivilegeType;
-import com.alibaba.csp.sentinel.dashboard.datasource.RuleConfigTypeEnum;
-import com.alibaba.csp.sentinel.dashboard.rule.PersistentRuleApiClient;
-import com.alibaba.csp.sentinel.dashboard.rule.memory.MemoryApiClient;
-import com.alibaba.csp.sentinel.util.StringUtil;
-
-import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
-import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
-import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
-import com.alibaba.csp.sentinel.dashboard.domain.Result;
-import com.alibaba.csp.sentinel.dashboard.repository.rule.InMemoryRuleRepositoryAdapter;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Flow rule controller.
@@ -86,7 +76,7 @@ public class FlowControllerV1 {
         }
         try {
             List<FlowRuleEntity> rules = new ArrayList<FlowRuleEntity>();
-            if(persistentApiClient instanceof MemoryApiClient){
+            if(persistentApiClient == null){
                 rules = sentinelApiClient.fetchFlowRuleOfMachine(app, ip, port);
             } else {
                 rules = persistentApiClient.fetch(app, RuleConfigTypeEnum.FLOW);
@@ -163,13 +153,7 @@ public class FlowControllerV1 {
         try {
             entity = repository.save(entity);
 
-
-            if(persistentApiClient instanceof MemoryApiClient){
-                publishRules(entity.getApp(), entity.getIp(), entity.getPort()).get();
-            } else {
-                publishRules_persistence(entity.getApp());
-            }
-
+            publishRules(entity.getApp(), entity.getIp(), entity.getPort()).get(5000, TimeUnit.MILLISECONDS);
             return Result.ofSuccess(entity);
         } catch (Throwable t) {
             Throwable e = t instanceof ExecutionException ? t.getCause() : t;
@@ -248,13 +232,7 @@ public class FlowControllerV1 {
                 return Result.ofFail(-1, "save entity fail: null");
             }
 
-
-            if(persistentApiClient instanceof MemoryApiClient){
-                publishRules(entity.getApp(), entity.getIp(), entity.getPort()).get(5000, TimeUnit.MILLISECONDS);
-            } else {
-                this.publishRules_persistence(entity.getApp());
-            }
-
+            publishRules(entity.getApp(), entity.getIp(), entity.getPort()).get(5000, TimeUnit.MILLISECONDS);
             return Result.ofSuccess(entity);
         } catch (Throwable t) {
             Throwable e = t instanceof ExecutionException ? t.getCause() : t;
@@ -282,12 +260,7 @@ public class FlowControllerV1 {
             return Result.ofFail(-1, e.getMessage());
         }
         try {
-            if(persistentApiClient instanceof MemoryApiClient){
-                publishRules(oldEntity.getApp(), oldEntity.getIp(), oldEntity.getPort()).get(5000, TimeUnit.MILLISECONDS);
-            } else {
-                this.publishRules_persistence(oldEntity.getApp());
-            }
-
+            publishRules(oldEntity.getApp(), oldEntity.getIp(), oldEntity.getPort()).get(5000, TimeUnit.MILLISECONDS);
             return Result.ofSuccess(id);
         } catch (Throwable t) {
             Throwable e = t instanceof ExecutionException ? t.getCause() : t;
@@ -298,11 +271,18 @@ public class FlowControllerV1 {
     }
 
     private void publishRules_persistence(/*@NonNull*/ String app) throws Exception {
-        List<FlowRuleEntity> rules = repository.findAllByApp(app);
-        persistentApiClient.publish(app, RuleConfigTypeEnum.FLOW, rules);
+
     }
 
     private CompletableFuture<Void> publishRules(String app, String ip, Integer port) {
+        if (persistentApiClient!=null){
+            List<FlowRuleEntity> rules = repository.findAllByApp(app);
+            try {
+                persistentApiClient.publish(app, RuleConfigTypeEnum.FLOW, rules);
+            } catch (Exception e) {
+                logger.error("com.alibaba.csp.sentinel.dashboard.controller.FlowControllerV1.publishRules have some error :",e);
+            }
+        }
         List<FlowRuleEntity> rules = repository.findAllByMachine(MachineInfo.of(app, ip, port));
         return sentinelApiClient.setFlowRuleOfMachineAsync(app, ip, port, rules);
     }
